@@ -22,7 +22,7 @@ class ProfileEditForm(forms.ModelForm):
 class CommentForm(forms.ModelForm):
     class Meta:
         model = Comment
-        fields = ['text']
+        fields = fields = ('text',)
         widgets = {
             'text': forms.Textarea(attrs={'rows': 3})
         }

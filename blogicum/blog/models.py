@@ -1,8 +1,8 @@
 from django.db import models
 from django.contrib.auth import get_user_model
-from django.conf import settings
-from .querysets import PostQuerySet
+
 from core.models import PublishedModel
+from .querysets import PostQuerySet
 from .constants import (
     POST_TITLE_MAX_LENGTH,
     POST_PUB_DATE_HELP_TEXT,
@@ -46,13 +46,13 @@ class Post(PublishedModel):
         on_delete=models.SET_NULL,
         verbose_name='Категория'
     )
-    objects = PostQuerySet.as_manager()
     image = models.ImageField(
         'Изображение',
         upload_to='posts_images/',
         blank=True,
         null=True,
     )
+    objects = PostQuerySet.as_manager()
 
     class Meta:
         verbose_name = 'публикация'
@@ -106,11 +106,10 @@ class Comment(models.Model):
     post = models.ForeignKey(
         Post,
         on_delete=models.CASCADE,
-        related_name='comments',
         verbose_name='Публикация'
     )
     author = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        User,
         on_delete=models.CASCADE,
         verbose_name='Автор'
     )
@@ -121,9 +120,10 @@ class Comment(models.Model):
     )
 
     class Meta:
-        ordering = ['created_at']  # Сортировка от старых к новым
+        ordering = ('created_at',)
         verbose_name = 'комментарий'
         verbose_name_plural = 'Комментарии'
+        default_related_name = 'comments'
 
     def __str__(self):
         return f'Комментарий {self.author} к посту {self.post.id}'

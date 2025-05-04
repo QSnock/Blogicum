@@ -4,32 +4,23 @@ from django.urls import reverse, reverse_lazy
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
-from django.db.models import Count
 
 from .models import Post, Category, Comment
 from .forms import RegistrationForm, CommentForm, ProfileEditForm
+from .constants import get_paginated_posts
 
 User = get_user_model()
 
 
-def get_paginated_posts(queryset, request, per_page=10):
-    paginator = Paginator(queryset, per_page)
-    page_number = request.GET.get('page')
-    return paginator.get_page(page_number)
-
-
 def index(request):
-    post_list = Post.objects.published().annotate(
-        comment_count=Count('comments')
-    ).order_by('-pub_date')
+    post_list = Post.objects.published().with_comments_count()
     return render(request, 'blog/index.html', {
         'page_obj': get_paginated_posts(post_list, request)
     })
 
 
 def post_detail(request, post_id):
-    post = get_object_or_404(Post.objects.with_related(), pk=post_id)
+    post = Post.objects.get_post_with_related(post_id)
 
     is_visible = (
         Post.objects.published().filter(pk=post_id).exists()
@@ -39,7 +30,7 @@ def post_detail(request, post_id):
     if not is_visible:
         return render(request, 'pages/404.html', status=404)
 
-    comments = post.comments.all().order_by('created_at')
+    comments = post.comments.order_by('created_at')
     form = CommentForm()
 
     return render(request, 'blog/detail.html', {
@@ -107,9 +98,7 @@ def category_posts(request, category_slug):
         slug=category_slug,
         is_published=True
     )
-    posts = category.posts.published().annotate(
-        comment_count=Count('comments')
-    ).order_by('-pub_date')
+    posts = category.posts.published().with_comments_count()
 
     return render(request, 'blog/category.html', {
         'category': category,
@@ -125,9 +114,7 @@ class RegistrationView(CreateView):
 
 def profile(request, username):
     profile = get_object_or_404(User, username=username)
-    posts = profile.posts.annotate(
-        comment_count=Count('comments')
-    ).order_by('-pub_date')
+    posts = profile.posts.with_comments_count().order_by('-pub_date')
 
     if request.user != profile:
         posts = posts.published()
@@ -177,6 +164,7 @@ class PostEditView(LoginRequiredMixin, UpdateView):
     model = Post
     fields = ['title', 'text', 'pub_date', 'location', 'category', 'image']
     template_name = 'blog/create.html'
+    pk_url_kwarg = 'post_id'
     queryset = Post.objects.with_related()
 
     def dispatch(self, request, *args, **kwargs):
