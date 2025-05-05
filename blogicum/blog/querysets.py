@@ -13,7 +13,9 @@ class PostQuerySet(models.QuerySet):
         ).order_by('-pub_date')
 
     def with_comments_count(self):
-        return self.annotate(comment_count=Count('comments'))
+        return self.annotate(
+            comment_count=Count('comments')
+        ).order_by('-pub_date')
 
     def latest_published(self, count=5):
         return self.published()[:count]

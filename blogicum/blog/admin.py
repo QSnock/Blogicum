@@ -58,7 +58,7 @@ class PostAdmin(admin.ModelAdmin):
     def image_preview(self, obj):
         if obj.image:
             return format_html('<img src="{}" height="50">', obj.image.url)
-        return "Нет фото"
+        return 'Нет фото'
 
 
 @admin.register(Category)

@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 
-from core.models import PublishedModel
+from core.models import PublishedModel, CreatedModel
 from .querysets import PostQuerySet
 from .constants import (
     POST_TITLE_MAX_LENGTH,
@@ -102,7 +102,7 @@ class Location(PublishedModel):
         return self.name
 
 
-class Comment(models.Model):
+class Comment(CreatedModel):
     post = models.ForeignKey(
         Post,
         on_delete=models.CASCADE,
@@ -114,13 +114,8 @@ class Comment(models.Model):
         verbose_name='Автор'
     )
     text = models.TextField('Текст комментария')
-    created_at = models.DateTimeField(
-        'Дата публикации',
-        auto_now_add=True
-    )
 
     class Meta:
-        ordering = ('created_at',)
         verbose_name = 'комментарий'
         verbose_name_plural = 'Комментарии'
         default_related_name = 'comments'

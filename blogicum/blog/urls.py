@@ -14,7 +14,7 @@ post_endpoints = [
         name='edit_post'
     ),
     path(
-        '<int:pk>/delete/',
+        '<int:post_id>/delete/',
         views.PostDeleteView.as_view(),
         name='delete_post'
     ),

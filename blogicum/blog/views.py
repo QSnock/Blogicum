@@ -4,12 +4,19 @@ from django.urls import reverse, reverse_lazy
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 
 from .models import Post, Category, Comment
 from .forms import RegistrationForm, CommentForm, ProfileEditForm
-from .constants import get_paginated_posts
+from .constants import PER_PAGE
 
 User = get_user_model()
+
+
+def get_paginated_posts(queryset, request, per_page=PER_PAGE):
+    paginator = Paginator(queryset, per_page)
+    page_number = request.GET.get('page')
+    return paginator.get_page(page_number)
 
 
 def index(request):
@@ -114,7 +121,7 @@ class RegistrationView(CreateView):
 
 def profile(request, username):
     profile = get_object_or_404(User, username=username)
-    posts = profile.posts.with_comments_count().order_by('-pub_date')
+    posts = profile.posts.with_comments_count()
 
     if request.user != profile:
         posts = posts.published()
@@ -160,7 +167,12 @@ class PostCreateView(LoginRequiredMixin, CreateView):
         )
 
 
-class PostEditView(LoginRequiredMixin, UpdateView):
+class PostActionMixin:
+    def is_post_owner(self):
+        return self.get_object().author == self.request.user
+
+
+class PostEditView(LoginRequiredMixin, PostActionMixin, UpdateView):
     model = Post
     fields = ['title', 'text', 'pub_date', 'location', 'category', 'image']
     template_name = 'blog/create.html'
@@ -168,7 +180,7 @@ class PostEditView(LoginRequiredMixin, UpdateView):
     queryset = Post.objects.with_related()
 
     def dispatch(self, request, *args, **kwargs):
-        if self.get_object().author != request.user:
+        if not self.is_post_owner():
             return redirect('blog:post_detail', post_id=self.get_object().pk)
         return super().dispatch(request, *args, **kwargs)
 
@@ -176,12 +188,18 @@ class PostEditView(LoginRequiredMixin, UpdateView):
         return reverse('blog:post_detail', kwargs={'post_id': self.object.pk})
 
 
-class PostDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+class PostDeleteView(
+    LoginRequiredMixin,
+    PostActionMixin,
+    UserPassesTestMixin,
+    DeleteView
+):
     model = Post
     template_name = 'blog/create.html'
+    pk_url_kwarg = 'post_id'
 
     def test_func(self):
-        return self.get_object().author == self.request.user
+        return self.is_post_owner()
 
     def get_success_url(self):
         return reverse(
