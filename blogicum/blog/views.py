@@ -167,9 +167,12 @@ class PostCreateView(LoginRequiredMixin, CreateView):
         )
 
 
-class PostActionMixin:
-    def is_post_owner(self):
+class PostActionMixin(UserPassesTestMixin):
+    def test_func(self):
         return self.get_object().author == self.request.user
+
+    def handle_no_permission(self):
+        return redirect('blog:post_detail', post_id=self.get_object().pk)
 
 
 class PostEditView(LoginRequiredMixin, PostActionMixin, UpdateView):
@@ -179,27 +182,14 @@ class PostEditView(LoginRequiredMixin, PostActionMixin, UpdateView):
     pk_url_kwarg = 'post_id'
     queryset = Post.objects.with_related()
 
-    def dispatch(self, request, *args, **kwargs):
-        if not self.is_post_owner():
-            return redirect('blog:post_detail', post_id=self.get_object().pk)
-        return super().dispatch(request, *args, **kwargs)
-
     def get_success_url(self):
         return reverse('blog:post_detail', kwargs={'post_id': self.object.pk})
 
 
-class PostDeleteView(
-    LoginRequiredMixin,
-    PostActionMixin,
-    UserPassesTestMixin,
-    DeleteView
-):
+class PostDeleteView(LoginRequiredMixin, PostActionMixin, DeleteView):
     model = Post
     template_name = 'blog/create.html'
     pk_url_kwarg = 'post_id'
-
-    def test_func(self):
-        return self.is_post_owner()
 
     def get_success_url(self):
         return reverse(
