@@ -1,11 +1,16 @@
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 STATICFILES_DIRS = [BASE_DIR / 'static']
 
-SECRET_KEY = 'django-insecure--b#g^@^wzy)c+t!*t!uc@gg0)6^hlfmztfn&qu&_&*+teg7@(6'
+load_dotenv()
+
+SECRET_KEY = os.getenv('SECRET_KEY')
+if not SECRET_KEY:
+    raise ValueError('Не установлен SECRET_KEY. Создайте файл .env и укажите SECRET_KEY.')
 
 DEBUG = True
 
